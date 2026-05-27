@@ -7,13 +7,84 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        .fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.25s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-4 font-sans text-slate-800">
 
-    <div id="app" class="w-full max-w-2xl"></div>
+    <!-- Persistent Card Container -->
+    <div class="w-full max-w-2xl bg-white rounded-3xl shadow-xl border border-blue-100 overflow-hidden fade-in min-h-[480px] flex flex-col justify-between">
+        
+        <!-- ================= START SCREEN ================= -->
+        <div id="start-screen" class="p-8 text-center flex flex-col items-center justify-center my-auto">
+            <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mb-6 text-blue-600">
+                <i class="fa-solid fa-award text-4xl"></i>
+            </div>
+            <h1 class="text-3xl font-extrabold text-slate-900 mb-2">CompArch Reviewer</h1>
+            <p class="text-slate-500 mb-8 max-w-md">Master all 43 Computer Architecture exam concepts with interactive feedback and detailed explanations.</p>
+            <button onclick="initQuiz()" class="w-full max-w-sm bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 transition-all transform hover:scale-[1.01] active:scale-[0.99] shadow-md">
+                <i class="fa-solid fa-play"></i> Start Quiz
+            </button>
+        </div>
+
+        <!-- ================= QUIZ SCREEN ================= -->
+        <div id="quiz-screen" class="hidden flex flex-col h-full flex-grow">
+            <!-- Header & Progress -->
+            <div class="px-6 pt-6 pb-4 border-b border-slate-100">
+                <div class="flex justify-between items-center mb-4">
+                    <span id="progress-text" class="text-blue-600 font-bold bg-blue-50 px-3 py-1 rounded-full text-sm">
+                        Question 1 of 43
+                    </span>
+                    <span class="text-slate-500 font-medium text-sm">
+                        Score: <span id="score-text" class="text-blue-600 font-bold text-lg">0</span>
+                    </span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-2.5">
+                    <div id="progress-bar" class="bg-blue-500 h-2.5 rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Question & Options Area -->
+            <div class="p-6 md:p-8 flex-grow">
+                <h2 id="question-text" class="text-xl md:text-2xl font-bold text-slate-800 mb-8 leading-relaxed">
+                    Question text goes here
+                </h2>
+
+                <!-- Options Grid -->
+                <div id="options-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Dynamic option buttons go here -->
+                </div>
+                
+                <!-- Explanation Area -->
+                <div id="explanation-box" class="hidden mt-6 p-5 rounded-2xl border fade-in">
+                    <h3 id="explanation-title" class="font-bold mb-1 flex items-center gap-2"></h3>
+                    <p id="explanation-desc" class="text-sm md:text-base opacity-90"></p>
+                </div>
+            </div>
+
+            <!-- Footer Section -->
+            <div class="bg-slate-50 p-4 px-6 flex justify-end border-t border-slate-100">
+                <button id="action-btn" onclick="handleAction()" class="w-full sm:w-auto text-white font-bold py-3 px-8 rounded-xl flex justify-center items-center gap-2 transition-all shadow-md"></button>
+            </div>
+        </div>
+
+        <!-- ================= END SCREEN ================= -->
+        <div id="end-screen" class="hidden p-8 text-center flex flex-col items-center justify-center my-auto">
+            <div class="mb-6 relative w-32 h-32 mx-auto flex items-center justify-center rounded-full border-8 border-slate-100">
+                <span id="end-percentage" class="text-4xl font-extrabold text-blue-500">
+                    0%
+                </span>
+            </div>
+            <h2 id="end-title" class="text-2xl font-bold text-slate-900 mb-2">Quiz Complete!</h2>
+            <p class="text-slate-500 mb-8 text-lg">You scored <span id="end-score" class="font-bold text-slate-800">0</span> out of 43.</p>
+            
+            <button onclick="initQuiz()" class="w-full max-w-sm bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 transition-all">
+                <i class="fa-solid fa-rotate-right"></i> Play Again
+            </button>
+        </div>
+
+    </div>
 
     <script>
         const quizData = [
@@ -281,25 +352,48 @@
         const shuffleArray = (array) => [...array].sort(() => Math.random() - 0.5);
 
         // State variables
-        let gameState = 'start'; // 'start', 'playing', 'end'
         let currentQuestionIndex = 0;
         let score = 0;
         let currentOptions = [];
         let selectedOptionIndex = null; 
-        let isChecked = false; // Tracks if the user has clicked "Submit"
+        let isChecked = false;
 
-        const appDiv = document.getElementById('app');
+        // Dom references
+        const startScreen = document.getElementById('start-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const endScreen = document.getElementById('end-screen');
+
+        const progressText = document.getElementById('progress-text');
+        const scoreText = document.getElementById('score-text');
+        const progressBar = document.getElementById('progress-bar');
+        const questionText = document.getElementById('question-text');
+        const optionsGrid = document.getElementById('options-grid');
+        
+        const explanationBox = document.getElementById('explanation-box');
+        const explanationTitle = document.getElementById('explanation-title');
+        const explanationDesc = document.getElementById('explanation-desc');
+        
+        const actionBtn = document.getElementById('action-btn');
+
+        function showScreen(screenId) {
+            startScreen.classList.add('hidden');
+            quizScreen.classList.add('hidden');
+            endScreen.classList.add('hidden');
+
+            if (screenId === 'start') startScreen.classList.remove('hidden');
+            if (screenId === 'quiz') quizScreen.classList.remove('hidden');
+            if (screenId === 'end') endScreen.classList.remove('hidden');
+        }
 
         function initQuiz() {
             score = 0;
             currentQuestionIndex = 0;
-            gameState = 'playing';
+            showScreen('quiz');
             loadQuestion();
         }
 
         function loadQuestion() {
             const q = quizData[currentQuestionIndex];
-            // Format options so we can easily map them
             const options = [
                 { text: q.correct, isCorrect: true },
                 ...q.wrong.map(w => ({ text: w, isCorrect: false }))
@@ -307,24 +401,112 @@
             currentOptions = shuffleArray(options);
             selectedOptionIndex = null;
             isChecked = false;
-            render();
+
+            // Update Header Stats
+            progressText.innerText = `Question ${currentQuestionIndex + 1} of ${quizData.length}`;
+            scoreText.innerText = score;
+            const progressPercent = (currentQuestionIndex / quizData.length) * 100;
+            progressBar.style.width = `${progressPercent}%`;
+
+            // Update Question Title
+            questionText.innerText = q.question;
+
+            // Clear & Hide Explanations
+            explanationBox.classList.add('hidden');
+
+            // Render Options
+            renderOptions();
+
+            // Render Footer Button
+            updateFooterButton();
+        }
+
+        function renderOptions() {
+            optionsGrid.innerHTML = '';
+            currentOptions.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "p-5 rounded-2xl text-left font-semibold text-lg transition-all flex items-center justify-between border-2 ";
+                
+                if (isChecked) {
+                    btn.classList.add('cursor-default');
+                    if (opt.isCorrect) {
+                        btn.className += "bg-green-50 border-green-500 text-green-800 shadow-sm";
+                        btn.innerHTML = `<span>${opt.text}</span><i class="fa-solid fa-circle-check text-green-500 text-xl"></i>`;
+                    } else if (selectedOptionIndex === idx) {
+                        btn.className += "bg-red-50 border-red-500 text-red-800 shadow-sm";
+                        btn.innerHTML = `<span>${opt.text}</span><i class="fa-solid fa-circle-xmark text-red-500 text-xl"></i>`;
+                    } else {
+                        btn.className += "bg-slate-50 border-slate-100 text-slate-400 opacity-60";
+                        btn.innerHTML = `<span>${opt.text}</span>`;
+                    }
+                } else {
+                    btn.classList.add('cursor-pointer');
+                    if (selectedOptionIndex === idx) {
+                        btn.className += "bg-blue-50 border-blue-500 text-blue-800 shadow-sm";
+                    } else {
+                        btn.className += "bg-white border-slate-100 text-slate-700 hover:border-blue-300 hover:bg-blue-50 active:scale-95";
+                    }
+                    btn.innerHTML = `<span>${opt.text}</span>`;
+                    btn.onclick = () => selectOption(idx);
+                }
+                optionsGrid.appendChild(btn);
+            });
         }
 
         function selectOption(index) {
-            if (isChecked) return; // Prevent changing answer after submitting
+            if (isChecked) return;
             selectedOptionIndex = index;
-            render();
+            renderOptions();
+            updateFooterButton();
+        }
+
+        function updateFooterButton() {
+            if (!isChecked) {
+                actionBtn.innerText = "Submit Answer";
+                if (selectedOptionIndex === null) {
+                    actionBtn.className = "w-full sm:w-auto bg-blue-600 text-white font-bold py-3 px-8 rounded-xl flex justify-center items-center gap-2 opacity-50 cursor-not-allowed transition-all shadow-md";
+                    actionBtn.disabled = true;
+                } else {
+                    actionBtn.className = "w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl flex justify-center items-center gap-2 cursor-pointer transition-all transform hover:-translate-y-[1px] shadow-md";
+                    actionBtn.disabled = false;
+                }
+            } else {
+                const isLast = currentQuestionIndex === quizData.length - 1;
+                actionBtn.innerHTML = `${isLast ? 'See Results' : 'Next Question'} <i class="fa-solid fa-chevron-right"></i>`;
+                actionBtn.className = "w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-8 rounded-xl flex justify-center items-center gap-2 cursor-pointer transition-all shadow-md animate-pulse";
+                actionBtn.disabled = false;
+            }
+        }
+
+        function handleAction() {
+            if (!isChecked) {
+                submitAnswer();
+            } else {
+                nextQuestion();
+            }
         }
 
         function submitAnswer() {
             if (selectedOptionIndex === null || isChecked) return;
             isChecked = true;
             
-            // Check if correct and increment score
-            if (currentOptions[selectedOptionIndex].isCorrect) {
+            const q = quizData[currentQuestionIndex];
+            const isCorrectChoice = currentOptions[selectedOptionIndex].isCorrect;
+            
+            if (isCorrectChoice) {
                 score++;
+                scoreText.innerText = score;
             }
-            render();
+
+            // Redraw options to show success/fail styles
+            renderOptions();
+
+            // Populate & slide in explanation box
+            explanationBox.className = `mt-6 p-5 rounded-2xl border fade-in ${isCorrectChoice ? 'bg-green-50 border-green-200 text-green-900' : 'bg-red-50 border-red-200 text-red-900'}`;
+            explanationTitle.innerHTML = `<i class="fa-solid ${isCorrectChoice ? 'fa-thumbs-up' : 'fa-circle-info'}"></i> ${isCorrectChoice ? 'Correct!' : 'Incorrect.'}`;
+            explanationDesc.innerText = q.explanation;
+
+            updateFooterButton();
         }
 
         function nextQuestion() {
@@ -332,158 +514,32 @@
             if (currentQuestionIndex < quizData.length) {
                 loadQuestion();
             } else {
-                gameState = 'end';
-                render();
+                showResults();
             }
         }
 
-        function render() {
-            if (gameState === 'start') {
-                appDiv.innerHTML = `
-                    <div class="bg-white rounded-3xl shadow-xl overflow-hidden p-8 text-center border border-blue-100 fade-in">
-                        <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6 text-blue-600">
-                            <i class="fa-solid fa-award text-4xl"></i>
-                        </div>
-                        <h1 class="text-3xl font-extrabold text-slate-900 mb-2">CompArch Reviewer</h1>
-                        <p class="text-slate-500 mb-8">Test your knowledge with 43 past exam questions. Explanations included!</p>
-                        <button onclick="initQuiz()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] active:scale-[0.98]">
-                            <i class="fa-solid fa-play"></i> Start Quiz
-                        </button>
-                    </div>
-                `;
-            } else if (gameState === 'playing') {
-                const q = quizData[currentQuestionIndex];
-                const progressPercent = ((currentQuestionIndex) / quizData.length) * 100;
+        function showResults() {
+            showScreen('end');
+            const percentage = Math.round((score / quizData.length) * 100);
+            
+            document.getElementById('end-percentage').innerText = `${percentage}%`;
+            document.getElementById('end-score').innerText = score;
 
-                // Build Options HTML
-                let optionsHtml = '';
-                currentOptions.forEach((opt, idx) => {
-                    let btnClass = "bg-white border-2 border-slate-100 text-slate-700";
-                    let iconHtml = '';
-
-                    if (isChecked) {
-                        // After submission, show correct/wrong
-                        if (opt.isCorrect) {
-                            btnClass = "bg-green-50 border-2 border-green-500 text-green-800 shadow-sm";
-                            iconHtml = `<i class="fa-solid fa-circle-check text-green-500 text-xl"></i>`;
-                        } else if (selectedOptionIndex === idx) {
-                            btnClass = "bg-red-50 border-2 border-red-500 text-red-800 shadow-sm";
-                            iconHtml = `<i class="fa-solid fa-circle-xmark text-red-500 text-xl"></i>`;
-                        } else {
-                            btnClass = "bg-slate-50 border-2 border-slate-100 text-slate-400 opacity-60";
-                        }
-                    } else {
-                        // Before submission, handle hover and selection
-                        if (selectedOptionIndex === idx) {
-                            btnClass = "bg-blue-50 border-2 border-blue-500 text-blue-800 shadow-sm";
-                        } else {
-                            btnClass += " hover:border-blue-300 hover:bg-blue-50 active:scale-95";
-                        }
-                    }
-
-                    optionsHtml += `
-                        <button onclick="selectOption(${idx})" class="${btnClass} relative p-5 rounded-2xl text-left font-semibold text-lg transition-all flex items-center justify-between cursor-${isChecked ? 'default' : 'pointer'}">
-                            <span>${opt.text}</span>
-                            ${iconHtml}
-                        </button>
-                    `;
-                });
-
-                // Build Action Button
-                let actionBtnHtml = '';
-                if (!isChecked) {
-                    const disabled = selectedOptionIndex === null ? 'disabled opacity-50 cursor-not-allowed' : 'hover:bg-blue-700 hover:-translate-y-1';
-                    actionBtnHtml = `
-                        <button onclick="submitAnswer()" ${disabled} class="w-full sm:w-auto bg-blue-600 text-white font-bold py-3 px-8 rounded-xl flex justify-center items-center gap-2 transition-all shadow-md">
-                            Submit Answer
-                        </button>
-                    `;
-                } else {
-                    const isLast = currentQuestionIndex === quizData.length - 1;
-                    actionBtnHtml = `
-                        <button onclick="nextQuestion()" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-8 rounded-xl flex justify-center items-center gap-2 transition-all shadow-md animate-pulse">
-                            ${isLast ? 'See Results' : 'Next Question'} <i class="fa-solid fa-chevron-right"></i>
-                        </button>
-                    `;
-                }
-
-                // Build Explanation Box
-                let explanationHtml = '';
-                if (isChecked) {
-                    const isCorrectChoice = currentOptions[selectedOptionIndex].isCorrect;
-                    explanationHtml = `
-                        <div class="mt-6 p-5 rounded-2xl border ${isCorrectChoice ? 'bg-green-50 border-green-200 text-green-900' : 'bg-red-50 border-red-200 text-red-900'} fade-in">
-                            <h3 class="font-bold mb-1 flex items-center gap-2">
-                                <i class="fa-solid ${isCorrectChoice ? 'fa-thumbs-up' : 'fa-circle-info'}"></i>
-                                ${isCorrectChoice ? 'Correct!' : 'Incorrect.'}
-                            </h3>
-                            <p class="text-sm md:text-base opacity-90">${q.explanation}</p>
-                        </div>
-                    `;
-                }
-
-                appDiv.innerHTML = `
-                    <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-blue-50 fade-in">
-                        <!-- Header & Progress -->
-                        <div class="px-6 pt-6 pb-4 border-b border-slate-100">
-                            <div class="flex justify-between items-center mb-4">
-                                <span class="text-blue-600 font-bold bg-blue-50 px-3 py-1 rounded-full text-sm">
-                                    Question ${currentQuestionIndex + 1} of ${quizData.length}
-                                </span>
-                                <span class="text-slate-500 font-medium text-sm">
-                                    Score: <span class="text-blue-600 font-bold text-lg">${score}</span>
-                                </span>
-                            </div>
-                            <div class="w-full bg-slate-100 rounded-full h-2.5">
-                                <div class="bg-blue-500 h-2.5 rounded-full transition-all duration-500 ease-out" style="width: ${progressPercent}%"></div>
-                            </div>
-                        </div>
-
-                        <!-- Question Area -->
-                        <div class="p-6 md:p-8">
-                            <h2 class="text-xl md:text-2xl font-bold text-slate-800 mb-8 leading-relaxed">
-                                ${q.question}
-                            </h2>
-
-                            <!-- Options Grid -->
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                ${optionsHtml}
-                            </div>
-                            
-                            <!-- Explanation Area -->
-                            ${explanationHtml}
-                        </div>
-
-                        <!-- Footer -->
-                        <div class="bg-slate-50 p-4 px-6 flex justify-end border-t border-slate-100">
-                            ${actionBtnHtml}
-                        </div>
-                    </div>
-                `;
-            } else if (gameState === 'end') {
-                const percentage = Math.round((score / quizData.length) * 100);
-                let message = percentage === 100 ? 'Perfect Score!' : percentage > 70 ? 'Great Job!' : 'Keep Practicing!';
-                
-                appDiv.innerHTML = `
-                    <div class="bg-white rounded-3xl shadow-xl overflow-hidden p-8 text-center border border-blue-100 fade-in">
-                        <div class="mb-6 relative w-32 h-32 mx-auto flex items-center justify-center rounded-full border-8 border-slate-100">
-                            <span class="text-4xl font-extrabold ${percentage > 70 ? 'text-green-500' : percentage > 40 ? 'text-blue-500' : 'text-red-400'}">
-                                ${percentage}%
-                            </span>
-                        </div>
-                        <h2 class="text-2xl font-bold text-slate-900 mb-2">${message}</h2>
-                        <p class="text-slate-500 mb-8 text-lg">You scored <span class="font-bold text-slate-800">${score}</span> out of ${quizData.length}.</p>
-                        
-                        <button onclick="initQuiz()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 transition-all">
-                            <i class="fa-solid fa-rotate-right"></i> Play Again
-                        </button>
-                    </div>
-                `;
+            const endTitle = document.getElementById('end-title');
+            if (percentage === 100) {
+                endTitle.innerText = "Perfect Score!";
+                endTitle.className = "text-2xl font-bold text-green-600 mb-2";
+            } else if (percentage >= 70) {
+                endTitle.innerText = "Great Job!";
+                endTitle.className = "text-2xl font-bold text-blue-600 mb-2";
+            } else {
+                endTitle.innerText = "Keep Practicing!";
+                endTitle.className = "text-2xl font-bold text-amber-600 mb-2";
             }
         }
 
-        // Initial render
-        render();
+        // Initialize App on start screen
+        showScreen('start');
     </script>
 </body>
 </html>
