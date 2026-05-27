@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CompArch Reviewer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-4 font-sans text-slate-800">
+
+    <div id="app" class="w-full max-w-2xl"></div>
+
+    <script>
+        const quizData = [
+            {
+                question: "What kind of pointer register is used to address data in a LIFO stack memory?",
+                correct: "SP",
+                wrong: ["BP", "IP", "SI"],
+                explanation: "The Stack Pointer (SP) is specifically designated to hold the offset address of the top of the stack, which operates on a Last-In-First-Out (LIFO) basis."
+            },
+            {
+                question: "What is the content of AX after execution of the instruction MOV AX, [BX+0010H]?",
+                correct: "F5F1H",
+                wrong: ["55F0H", "F0F2H", "0012H"],
+                explanation: "This uses Register Relative addressing. The physical address is calculated using the Data Segment (DS), BX, and the offset 0010H, retrieving the word F5F1H from that memory location."
+            },
+            {
+                question: "What is the content of AX after execution of the instruction MOV AX, BEAM?",
+                correct: "ADDEH",
+                wrong: ["0042H", "F0F0H", "1234H"],
+                explanation: "BEAM represents a direct memory offset (0042H). The instruction loads AX with the 16-bit word stored at that specific offset in the Data Segment."
+            },
+            {
+                question: "Assume all flags are zero. What is the content of CF after executing the instruction ADD AX, BX?",
+                correct: "0",
+                wrong: ["1", "Undefined", "X"],
+                explanation: "Adding the values of AX and BX in this specific scenario does not produce a carry out of the Most Significant Bit (bit 15), leaving the Carry Flag (CF) at 0."
+            },
+            {
+                question: "Assume all flags are zero. What is the content of the sign flag after executing the instruction ADD AX, BX?",
+                correct: "0",
+                wrong: ["1", "Undefined", "X"],
+                explanation: "The result of the addition yields a value where the Most Significant Bit (MSB) is 0, which indicates a positive number, so the Sign Flag (SF) remains 0."
+            },
+            {
+                question: "It is used to point to the offset of the next instruction executed in memory.",
+                correct: "IP",
+                wrong: ["SP", "BP", "DI"],
+                explanation: "The Instruction Pointer (IP) always holds the offset address of the very next instruction the CPU is scheduled to fetch and execute."
+            },
+            {
+                question: "Assume all flags/registers are zero. After the given sequence (mov ax,0409; inc al; add ah,al; mov ax,cx; inc dl; dec al; mov ax,dx; inc dl; inc ch), the value of DL will be:",
+                correct: "01",
+                wrong: ["00", "09", "04"],
+                explanation: "Tracing the register states through the execution block modifies DL. Based on the reviewer's execution map, DL is incremented to hold 01."
+            },
+            {
+                question: "Assume all flags/registers are zero. After the given sequence (mov ax,0409; inc al; add ah,al; mov ax,cx; inc dl; dec al; mov ax,dx; inc dl; inc ch), the value of CX will be:",
+                correct: "0101",
+                wrong: ["0000", "0409", "0100"],
+                explanation: "Tracing the sequence, CH is incremented and modified throughout the block, resulting in CX holding the hex value 0101H."
+            },
+            {
+                question: "Perform: 0110 1100 0011 1001 + 1110 0101 1101 0111. What is the value of the Carry Flag after performing the ADD operation?",
+                correct: "1",
+                wrong: ["0", "Undefined", "X"],
+                explanation: "When you add these two 16-bit binary numbers, the sum exceeds 16 bits. The carry out of the MSB causes the Carry Flag (CF) to be set to 1."
+            },
+            {
+                question: "It is an addressing mode that transfers a byte or word between the memory & register.",
+                correct: "direct",
+                wrong: ["indirect", "immediate", "indexed"],
+                explanation: "In Direct addressing mode, the instruction explicitly contains the fixed memory offset used to fetch or store the data."
+            },
+            {
+                question: "Given the hardware implementation of X and Y into an XOR gate back to X, its corresponding RTL code is:",
+                correct: "X ← X ⊕ Y",
+                wrong: ["X ← X + Y", "Y ← X ⊕ Y", "X ← X ∧ Y"],
+                explanation: "The ⊕ symbol denotes the XOR logical operation. The inputs X and Y are XORed together, and the result is fed back into register X."
+            },
+            {
+                question: "Assume all flags are initially one. AX=00AAH. What is the content of SF after executing the instruction INC AX?",
+                correct: "0",
+                wrong: ["1", "Undefined", "A"],
+                explanation: "INC AX changes 00AAH to 00ABH. The MSB (bit 15) of 00ABH is 0, so the Sign Flag (SF) becomes 0, indicating a positive result."
+            },
+            {
+                question: "What is the physical address if Segment Base Address = 2234H and Offset Address = 1322H?",
+                correct: "23662H",
+                wrong: ["3556H", "22472H", "24662H"],
+                explanation: "Physical Address = (Segment * 10H) + Offset. Therefore, (2234H * 10H) + 1322H = 22340H + 1322H = 23662H."
+            },
+            {
+                question: "It is a memory register that is often used to hold the temporary result after an arithmetic or logic operation.",
+                correct: "AX",
+                wrong: ["BX", "CX", "DX"],
+                explanation: "The Accumulator (AX) is the primary register designed by default to hold operands and temporary results for arithmetic and logical operations."
+            },
+            {
+                question: "Assume CX=126CH, DX=908AH. What is the content of PF after executing the instruction ADD CX, DX?",
+                correct: "0",
+                wrong: ["1", "Undefined", "X"],
+                explanation: "The Parity Flag (PF) evaluates the lower 8 bits of the result. Based on the reviewer's resulting bits, there is an odd number of 1s, making PF = 0."
+            },
+            {
+                question: "Perform: 0110 1100 0011 1001 + 1110 0101 1101 0111. What is the value of the Overflow Flag after performing the ADD operation?",
+                correct: "0",
+                wrong: ["1", "Undefined", "X"],
+                explanation: "Adding a positive number (MSB=0) and a negative number (MSB=1) can never cause signed overflow. Thus, the Overflow Flag (OF) remains 0."
+            },
+            {
+                question: "If DI=1337H, ES=2376H. What is the physical address used by the extra segment?",
+                correct: "24A97H",
+                wrong: ["25A97H", "145A7H", "23760H"],
+                explanation: "Physical Address = (ES * 10H) + DI. Therefore, (2376H * 10H) + 1337H = 23760H + 1337H = 24A97H."
+            },
+            {
+                question: "This is equal to the MSB of the result of the previous operation.",
+                correct: "SF",
+                wrong: ["CF", "OF", "ZF"],
+                explanation: "The Sign Flag (SF) is an exact copy of the Most Significant Bit (MSB) of the result, directly indicating if a number is negative (1) or positive (0)."
+            },
+            {
+                question: "What kind of addressing mode is the instruction MOV AX, [BX+0010H]?",
+                correct: "Register Relative/Base Addressing",
+                wrong: ["Direct Addressing", "Indexed Addressing", "Immediate Addressing"],
+                explanation: "It combines a base register (BX) with a constant relative displacement (0010H) to form the effective memory address."
+            },
+            {
+                question: "What is the content of AX after the execution of the instruction MOV AX, [BX]?",
+                correct: "AB0CH",
+                wrong: ["0012H", "000CH", "F0F0H"],
+                explanation: "BX holds a memory offset. This instruction retrieves the 16-bit word located at that offset in the data segment (which contains AB0CH)."
+            },
+            {
+                question: "What is the content of BH after executing the instruction MOV BX, 0023H?",
+                correct: "00H",
+                wrong: ["23H", "0023H", "Undefined"],
+                explanation: "BX is updated to 0023H. BH represents the higher 8 bits (00H) and BL represents the lower 8 bits (23H)."
+            },
+            {
+                question: "For the instruction MOV AH, 2818H; AH will contain:",
+                correct: "INVALID CODE",
+                wrong: ["28H", "18H", "2818H"],
+                explanation: "2818H is a 16-bit value, but AH is only an 8-bit register. The assembler will flag this as an invalid size mismatch error."
+            },
+            {
+                question: "What is the content of AH after the execution of the instruction MOV AX, [BX+0010H]? (Result AX = F5F1H)",
+                correct: "F5H",
+                wrong: ["F1H", "55H", "00H"],
+                explanation: "The full word loaded into AX is F5F1H. AH holds the upper byte (F5H) and AL holds the lower byte (F1H)."
+            },
+            {
+                question: "Assume all flags are initially zero. What is the content of CF after executing the instruction ADD CX, DX?",
+                correct: "0",
+                wrong: ["1", "Undefined", "X"],
+                explanation: "The sum of the values in CX and DX does not produce a bit that carries out past the 16th bit, so the Carry Flag (CF) stays 0."
+            },
+            {
+                question: "Assume all flags are initially zero. What is the content of AF after executing the instruction ADD CX, DX?",
+                correct: "1",
+                wrong: ["0", "Undefined", "X"],
+                explanation: "The addition creates a carry from bit 3 to bit 4 (from the lower nibble to the upper nibble of the lower byte), setting the Auxiliary Carry Flag (AF) to 1."
+            },
+            {
+                question: "If IP=0023H, BX=1337H, DS=3256. What is the physical address used by the DS register?",
+                correct: "33897H",
+                wrong: ["32560H", "35597H", "33880H"],
+                explanation: "Using BX as the offset for DS: Physical Address = (3256H * 10H) + 1337H = 32560H + 1337H = 33897H."
+            },
+            {
+                question: "It is a flag register that is set to 1 if the low-order 8 bits of the result contain an even number of 1s.",
+                correct: "PF",
+                wrong: ["ZF", "CF", "SF"],
+                explanation: "The Parity Flag (PF) is exclusively used to monitor the lower 8 bits of a result. It is set to 1 for even parity and 0 for odd parity."
+            },
+            {
+                question: "int 21H of service 1 is for:",
+                correct: "INPUT",
+                wrong: ["OUTPUT", "PRINT STRING", "TERMINATE"],
+                explanation: "In DOS interrupts, setting AH=01H before calling INT 21H triggers the standard character input function (with echo to the screen)."
+            },
+            {
+                question: "Given the hardware implementation, its corresponding RTL code is (X and Y fed into AND/Combinational):",
+                correct: "M: X ← X ∧ Y",
+                wrong: ["M: X ← X + Y", "M: X ← X ⊕ Y", "M: X ← Y"],
+                explanation: "The logic gate connecting inputs X and Y in this specific diagram implies a logical AND operation (∧), with the result stored back into X."
+            },
+            {
+                question: "It is a memory register often used to hold the base address of data located in the memory & the address of a table of data referenced by translate.",
+                correct: "BX",
+                wrong: ["AX", "CX", "DX"],
+                explanation: "The Base Register (BX) is designated for memory addressing, commonly acting as a pointer to the start (base) of data arrays or tables."
+            },
+            {
+                question: "It is a flag register that is set to 1 if the result of the previous operation is zero and 0 if the result is nonzero.",
+                correct: "ZF",
+                wrong: ["CF", "PF", "OF"],
+                explanation: "The Zero Flag (ZF) is the CPU's way of indicating if a comparison was equal or an arithmetic operation completely zeroed out a register."
+            },
+            {
+                question: "It is used to execute the command.",
+                correct: "INTERRUPT",
+                wrong: ["JUMP", "CALL", "RETURN"],
+                explanation: "Interrupt instructions (like INT) are used to pause current execution and invoke built-in system or BIOS commands and services."
+            },
+            {
+                question: "It is the value of the Parity Flag after performing the ADD operation (from specific test case).",
+                correct: "0",
+                wrong: ["1", "Undefined", "X"],
+                explanation: "For the given test case, the resulting lower 8 bits contain an odd amount of binary 1s, which resets the Parity Flag to 0."
+            },
+            {
+                question: "What are the contents of CL after executing the instruction XCHG CL, BH? (Given previous setup)",
+                correct: "80H",
+                wrong: ["00H", "08H", "88H"],
+                explanation: "XCHG swaps the values of the two operands. If BH held 80H, swapping them transfers the 80H directly into CL."
+            },
+            {
+                question: "It is the value of Sign Flag after performing the ADD operation (from specific test case).",
+                correct: "0",
+                wrong: ["1", "Undefined", "X"],
+                explanation: "Because the Most Significant Bit (MSB) of the output is 0, the CPU knows the result is positive, setting SF = 0."
+            },
+            {
+                question: "It is an addressing mode used to transfer a byte or a word from the source to the destination Register.",
+                correct: "register",
+                wrong: ["direct", "immediate", "indirect"],
+                explanation: "Register addressing mode is when both the source and destination operands are CPU registers (e.g., MOV AX, BX)."
+            },
+            {
+                question: "What kind of addressing mode is the instruction MOV AX, [BX]?",
+                correct: "Register Indirect addressing",
+                wrong: ["Direct", "Base Relative", "Indexed"],
+                explanation: "The memory address is not provided directly; instead, the instruction looks 'indirectly' inside the BX register to find the memory offset."
+            },
+            {
+                question: "What are the contents of AH after executing the instruction INC AX? (AX=00AAH initially)",
+                correct: "00H",
+                wrong: ["01H", "AAH", "FFH"],
+                explanation: "INC AX increments AX from 00AAH to 00ABH. The upper byte, AH, remains completely unaffected and stays 00H."
+            },
+            {
+                question: "If SP=1120, SS=3388. What is the physical address used by the stack segment?",
+                correct: "349A0H",
+                wrong: ["33880H", "34500H", "34900H"],
+                explanation: "Physical Address = (SS * 10H) + SP. Therefore, (3388H * 10H) + 1120H = 33880H + 1120H = 349A0H."
+            },
+            {
+                question: "If IP=1234H, CS=1327H. What is the physical address used by the CS register?",
+                correct: "144A4H",
+                wrong: ["13270H", "14504H", "155A4H"],
+                explanation: "Physical Address = (CS * 10H) + IP. Therefore, (1327H * 10H) + 1234H = 13270H + 1234H = 144A4H."
+            },
+            {
+                question: "Z = 0101 1001 0111 1000. CIR(Z) = ?",
+                correct: "00101 1001 0111 100",
+                wrong: ["1010 1001 0111 1000", "1011 0010 1111 0000", "0101 1001 0111 1000"],
+                explanation: "CIR denotes a Circular Shift Right operation. The bits are shifted right, and the rightmost bit wraps around to the leftmost position."
+            },
+            {
+                question: "An addition causes this flag to be set to 1 if there is a carry out of the MSB, and a subtraction causes it to be set to 1 if a borrow is needed.",
+                correct: "CF",
+                wrong: ["OF", "SF", "ZF"],
+                explanation: "The Carry Flag (CF) tracks unsigned overflow. It flags when an addition carries out of bounds, or a subtraction requires a borrow from a non-existent higher bit."
+            },
+            {
+                question: "What is the RTL code for the given program, IF K = 1 THEN copy Y to X, ELSE increment X?",
+                correct: "K: X ← Y, K': X ← X + 1",
+                wrong: ["K: Y ← X, K': Y ← Y + 1", "K: X ← X + 1, K': X ← Y", "K': X ← Y, K: X ← X + 1"],
+                explanation: "In RTL (Register Transfer Language), 'K:' denotes the condition being true (IF K=1), and 'K':' denotes the condition being false (ELSE)."
+            }
+        ];
+
+        // Shuffle helper function
+        const shuffleArray = (array) => [...array].sort(() => Math.random() - 0.5);
+
+        // State variables
+        let gameState = 'start'; // 'start', 'playing', 'end'
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let currentOptions = [];
+        let selectedOptionIndex = null; 
+        let isChecked = false; // Tracks if the user has clicked "Submit"
+
+        const appDiv = document.getElementById('app');
+
+        function initQuiz() {
+            score = 0;
+            currentQuestionIndex = 0;
+            gameState = 'playing';
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const q = quizData[currentQuestionIndex];
+            // Format options so we can easily map them
+            const options = [
+                { text: q.correct, isCorrect: true },
+                ...q.wrong.map(w => ({ text: w, isCorrect: false }))
+            ];
+            currentOptions = shuffleArray(options);
+            selectedOptionIndex = null;
+            isChecked = false;
+            render();
+        }
+
+        function selectOption(index) {
+            if (isChecked) return; // Prevent changing answer after submitting
+            selectedOptionIndex = index;
+            render();
+        }
+
+        function submitAnswer() {
+            if (selectedOptionIndex === null || isChecked) return;
+            isChecked = true;
+            
+            // Check if correct and increment score
+            if (currentOptions[selectedOptionIndex].isCorrect) {
+                score++;
+            }
+            render();
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < quizData.length) {
+                loadQuestion();
+            } else {
+                gameState = 'end';
+                render();
+            }
+        }
+
+        function render() {
+            if (gameState === 'start') {
+                appDiv.innerHTML = `
+                    <div class="bg-white rounded-3xl shadow-xl overflow-hidden p-8 text-center border border-blue-100 fade-in">
+                        <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6 text-blue-600">
+                            <i class="fa-solid fa-award text-4xl"></i>
+                        </div>
+                        <h1 class="text-3xl font-extrabold text-slate-900 mb-2">CompArch Reviewer</h1>
+                        <p class="text-slate-500 mb-8">Test your knowledge with 43 past exam questions. Explanations included!</p>
+                        <button onclick="initQuiz()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] active:scale-[0.98]">
+                            <i class="fa-solid fa-play"></i> Start Quiz
+                        </button>
+                    </div>
+                `;
+            } else if (gameState === 'playing') {
+                const q = quizData[currentQuestionIndex];
+                const progressPercent = ((currentQuestionIndex) / quizData.length) * 100;
+
+                // Build Options HTML
+                let optionsHtml = '';
+                currentOptions.forEach((opt, idx) => {
+                    let btnClass = "bg-white border-2 border-slate-100 text-slate-700";
+                    let iconHtml = '';
+
+                    if (isChecked) {
+                        // After submission, show correct/wrong
+                        if (opt.isCorrect) {
+                            btnClass = "bg-green-50 border-2 border-green-500 text-green-800 shadow-sm";
+                            iconHtml = `<i class="fa-solid fa-circle-check text-green-500 text-xl"></i>`;
+                        } else if (selectedOptionIndex === idx) {
+                            btnClass = "bg-red-50 border-2 border-red-500 text-red-800 shadow-sm";
+                            iconHtml = `<i class="fa-solid fa-circle-xmark text-red-500 text-xl"></i>`;
+                        } else {
+                            btnClass = "bg-slate-50 border-2 border-slate-100 text-slate-400 opacity-60";
+                        }
+                    } else {
+                        // Before submission, handle hover and selection
+                        if (selectedOptionIndex === idx) {
+                            btnClass = "bg-blue-50 border-2 border-blue-500 text-blue-800 shadow-sm";
+                        } else {
+                            btnClass += " hover:border-blue-300 hover:bg-blue-50 active:scale-95";
+                        }
+                    }
+
+                    optionsHtml += `
+                        <button onclick="selectOption(${idx})" class="${btnClass} relative p-5 rounded-2xl text-left font-semibold text-lg transition-all flex items-center justify-between cursor-${isChecked ? 'default' : 'pointer'}">
+                            <span>${opt.text}</span>
+                            ${iconHtml}
+                        </button>
+                    `;
+                });
+
+                // Build Action Button
+                let actionBtnHtml = '';
+                if (!isChecked) {
+                    const disabled = selectedOptionIndex === null ? 'disabled opacity-50 cursor-not-allowed' : 'hover:bg-blue-700 hover:-translate-y-1';
+                    actionBtnHtml = `
+                        <button onclick="submitAnswer()" ${disabled} class="w-full sm:w-auto bg-blue-600 text-white font-bold py-3 px-8 rounded-xl flex justify-center items-center gap-2 transition-all shadow-md">
+                            Submit Answer
+                        </button>
+                    `;
+                } else {
+                    const isLast = currentQuestionIndex === quizData.length - 1;
+                    actionBtnHtml = `
+                        <button onclick="nextQuestion()" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-8 rounded-xl flex justify-center items-center gap-2 transition-all shadow-md animate-pulse">
+                            ${isLast ? 'See Results' : 'Next Question'} <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    `;
+                }
+
+                // Build Explanation Box
+                let explanationHtml = '';
+                if (isChecked) {
+                    const isCorrectChoice = currentOptions[selectedOptionIndex].isCorrect;
+                    explanationHtml = `
+                        <div class="mt-6 p-5 rounded-2xl border ${isCorrectChoice ? 'bg-green-50 border-green-200 text-green-900' : 'bg-red-50 border-red-200 text-red-900'} fade-in">
+                            <h3 class="font-bold mb-1 flex items-center gap-2">
+                                <i class="fa-solid ${isCorrectChoice ? 'fa-thumbs-up' : 'fa-circle-info'}"></i>
+                                ${isCorrectChoice ? 'Correct!' : 'Incorrect.'}
+                            </h3>
+                            <p class="text-sm md:text-base opacity-90">${q.explanation}</p>
+                        </div>
+                    `;
+                }
+
+                appDiv.innerHTML = `
+                    <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-blue-50 fade-in">
+                        <!-- Header & Progress -->
+                        <div class="px-6 pt-6 pb-4 border-b border-slate-100">
+                            <div class="flex justify-between items-center mb-4">
+                                <span class="text-blue-600 font-bold bg-blue-50 px-3 py-1 rounded-full text-sm">
+                                    Question ${currentQuestionIndex + 1} of ${quizData.length}
+                                </span>
+                                <span class="text-slate-500 font-medium text-sm">
+                                    Score: <span class="text-blue-600 font-bold text-lg">${score}</span>
+                                </span>
+                            </div>
+                            <div class="w-full bg-slate-100 rounded-full h-2.5">
+                                <div class="bg-blue-500 h-2.5 rounded-full transition-all duration-500 ease-out" style="width: ${progressPercent}%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Question Area -->
+                        <div class="p-6 md:p-8">
+                            <h2 class="text-xl md:text-2xl font-bold text-slate-800 mb-8 leading-relaxed">
+                                ${q.question}
+                            </h2>
+
+                            <!-- Options Grid -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                ${optionsHtml}
+                            </div>
+                            
+                            <!-- Explanation Area -->
+                            ${explanationHtml}
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="bg-slate-50 p-4 px-6 flex justify-end border-t border-slate-100">
+                            ${actionBtnHtml}
+                        </div>
+                    </div>
+                `;
+            } else if (gameState === 'end') {
+                const percentage = Math.round((score / quizData.length) * 100);
+                let message = percentage === 100 ? 'Perfect Score!' : percentage > 70 ? 'Great Job!' : 'Keep Practicing!';
+                
+                appDiv.innerHTML = `
+                    <div class="bg-white rounded-3xl shadow-xl overflow-hidden p-8 text-center border border-blue-100 fade-in">
+                        <div class="mb-6 relative w-32 h-32 mx-auto flex items-center justify-center rounded-full border-8 border-slate-100">
+                            <span class="text-4xl font-extrabold ${percentage > 70 ? 'text-green-500' : percentage > 40 ? 'text-blue-500' : 'text-red-400'}">
+                                ${percentage}%
+                            </span>
+                        </div>
+                        <h2 class="text-2xl font-bold text-slate-900 mb-2">${message}</h2>
+                        <p class="text-slate-500 mb-8 text-lg">You scored <span class="font-bold text-slate-800">${score}</span> out of ${quizData.length}.</p>
+                        
+                        <button onclick="initQuiz()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 transition-all">
+                            <i class="fa-solid fa-rotate-right"></i> Play Again
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        // Initial render
+        render();
+    </script>
+</body>
+</html>
